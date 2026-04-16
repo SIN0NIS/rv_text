@@ -2,83 +2,87 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>고급 말풍선 편집기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>모바일 만화 편집기</title>
     <style>
-        :root { --primary: #4a90e2; }
-        body { display: flex; flex-direction: column; align-items: center; background: #333; color: white; font-family: sans-serif; padding: 20px; }
+        :root { --primary: #007AFF; --success: #34C759; }
+        body { 
+            display: flex; flex-direction: column; align-items: center; 
+            background: #1c1c1e; color: white; font-family: -apple-system, sans-serif; 
+            margin: 0; padding: 10px; box-sizing: border-box;
+        }
         
-        /* 컨트롤 패널 */
+        /* 컨트롤 영역: 모바일 가독성 높임 */
         .controls { 
-            background: white; color: #333; padding: 20px; border-radius: 12px; 
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
-            margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            width: 100%; max-width: 500px; background: #2c2c2e; padding: 15px; 
+            border-radius: 15px; display: flex; flex-direction: column; gap: 12px;
+            margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 12px; font-weight: bold; color: #666; }
-        
-        /* 편집 영역 */
-        .editor-container { position: relative; cursor: crosshair; user-select: none; }
-        canvas { border: 2px solid #555; max-width: 100%; height: auto; background: white; }
+        .input-row { display: flex; gap: 8px; }
+        input, select { 
+            flex: 1; padding: 10px; border-radius: 8px; border: none; 
+            background: #3a3a3c; color: white; font-size: 14px;
+        }
+        .slider-group { display: flex; align-items: center; gap: 10px; }
+        .slider-group label { font-size: 12px; min-width: 50px; }
+        input[type="range"] { flex: 2; }
 
+        /* 버튼 그룹 */
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         button { 
-            grid-column: span 2; padding: 12px; background: var(--primary); 
-            color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+            padding: 12px; border: none; border-radius: 10px; font-weight: bold; 
+            color: white; cursor: pointer; font-size: 14px; transition: 0.2s;
         }
-        button:hover { background: #357abd; }
-        .hint { margin-top: 10px; color: #aaa; font-size: 13px; }
+        .btn-save { background: var(--primary); }
+        .btn-copy { background: var(--success); }
+        button:active { opacity: 0.7; transform: scale(0.98); }
+
+        /* 캔버스 영역 */
+        .editor-container { 
+            position: relative; width: 100%; max-width: 500px; 
+            overflow: hidden; border-radius: 10px; background: #000;
+        }
+        canvas { width: 100% !important; height: auto !important; display: block; touch-action: none; }
+
+        .hint { margin-top: 12px; color: #8e8e93; font-size: 12px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h2>말풍선 커스텀 편집기</h2>
-
     <div class="controls">
-        <div class="control-group">
-            <label>상단 문구</label>
-            <input type="text" id="topText" value="여기를 드래그해서 이동" oninput="draw()">
+        <div class="input-row">
+            <input type="text" id="topText" placeholder="상단 문구" value="상단 말풍선" oninput="draw()">
+            <input type="text" id="bottomText" placeholder="하단 문구" value="하단 말풍선" oninput="draw()">
         </div>
-        <div class="control-group">
-            <label>하단 문구</label>
-            <input type="text" id="bottomText" value="폰트와 크기도 조절 가능" oninput="draw()">
-        </div>
-        <div class="control-group">
-            <label>폰트 선택</label>
-            <select id="fontFamily" onchange="draw()">
-                <option value="sans-serif">기본 고딕</option>
-                <option value="serif">명조체</option>
-                <option value="cursive">손글씨풍</option>
-                <option value="'Arial Black'">두꺼운 고딕</option>
-                <option value="'Courier New'">타자기체</option>
-            </select>
-        </div>
-        <div class="control-group">
+        
+        <div class="slider-group">
             <label>글자 크기</label>
-            <input type="range" id="fontSize" min="10" max="100" value="30" oninput="draw()">
-        </div>
-        <div class="control-group">
-            <label>글자 굵기</label>
+            <input type="range" id="fontSize" min="20" max="120" value="50" oninput="draw()">
             <select id="fontWeight" onchange="draw()">
+                <option value="bold">굵게</option>
                 <option value="normal">보통</option>
-                <option value="bold" selected>굵게</option>
             </select>
         </div>
-        <button onclick="download()">이미지로 저장하기</button>
+
+        <div class="btn-group">
+            <button class="btn-save" onclick="download()">파일 저장</button>
+            <button class="btn-copy" onclick="copyToClipboard()">클립보드 복사</button>
+        </div>
     </div>
 
     <div class="editor-container">
         <canvas id="canvas"></canvas>
     </div>
 
-    <p class="hint">💡 화면 위 글자를 마우스나 손가락으로 드래그해서 원하는 위치에 놓으세요!</p>
+    <p class="hint">글자를 직접 터치해서 원하는 위치로 옮기세요!<br>복사 후 카톡창에 바로 붙여넣기 하시면 됩니다.</p>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const img = new Image();
-        img.src = 'sample.png'; // 같은 폴더의 이미지 파일명
+        img.crossOrigin = "anonymous"; // 클립보드 복사를 위해 보안 설정 허용
+        img.src = 'sample.png'; 
 
-        // 텍스트 설정 상태
         let texts = [
             { id: 'top', x: 0, y: 0, isDragging: false },
             { id: 'bottom', x: 0, y: 0, isDragging: false }
@@ -87,7 +91,6 @@
         img.onload = () => {
             canvas.width = img.naturalWidth;
             canvas.height = img.naturalHeight;
-            // 초기 위치 설정 (말풍선 근처)
             texts[0].x = canvas.width / 2;
             texts[0].y = canvas.height * 0.15;
             texts[1].x = canvas.width / 2;
@@ -100,66 +103,75 @@
             ctx.drawImage(img, 0, 0);
 
             const size = document.getElementById('fontSize').value;
-            const family = document.getElementById('fontFamily').value;
             const weight = document.getElementById('fontWeight').value;
 
-            ctx.font = `${weight} ${size}px ${family}`;
+            ctx.font = `${weight} ${size}px sans-serif`;
             ctx.fillStyle = "black";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            // 상단 텍스트
             ctx.fillText(document.getElementById('topText').value, texts[0].x, texts[0].y);
-            // 하단 텍스트
             ctx.fillText(document.getElementById('bottomText').value, texts[1].x, texts[1].y);
         }
 
-        // 드래그 로직
-        function getMousePos(e) {
+        // 마우스/터치 위치 계산
+        function getPos(e) {
             const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             return {
-                x: (e.clientX || e.touches[0].clientX - rect.left) * scaleX - rect.left * scaleX,
-                y: (e.clientY || e.touches[0].clientY - rect.top) * scaleY - rect.top * scaleY
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
             };
         }
 
-        const handleStart = (e) => {
-            const pos = getMousePos(e);
+        const startDragging = (e) => {
+            const pos = getPos(e);
             texts.forEach(t => {
                 const dist = Math.sqrt((pos.x - t.x)**2 + (pos.y - t.y)**2);
-                if (dist < 50) t.isDragging = true; // 텍스트 근처 클릭 시 드래그 시작
+                if (dist < 100) t.isDragging = true; 
             });
         };
 
-        const handleMove = (e) => {
-            const pos = getMousePos(e);
+        const moveDragging = (e) => {
+            if (!texts.some(t => t.isDragging)) return;
+            e.preventDefault();
+            const pos = getPos(e);
             texts.forEach(t => {
-                if (t.isDragging) {
-                    t.x = pos.x;
-                    t.y = pos.y;
-                    draw();
-                }
+                if (t.isDragging) { t.x = pos.x; t.y = pos.y; draw(); }
             });
         };
 
-        const handleEnd = () => texts.forEach(t => t.isDragging = false);
+        const stopDragging = () => texts.forEach(t => t.isDragging = false);
 
-        canvas.addEventListener('mousedown', handleStart);
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleEnd);
-        
-        // 터치 지원 (모바일)
-        canvas.addEventListener('touchstart', handleStart);
-        window.addEventListener('touchmove', handleMove);
-        window.addEventListener('touchend', handleEnd);
+        canvas.addEventListener('mousedown', startDragging);
+        window.addEventListener('mousemove', moveDragging);
+        window.addEventListener('mouseup', stopDragging);
+        canvas.addEventListener('touchstart', startDragging, {passive: false});
+        window.addEventListener('touchmove', moveDragging, {passive: false});
+        window.addEventListener('touchend', stopDragging);
 
+        // 파일 저장 기능
         function download() {
             const link = document.createElement('a');
-            link.download = 'custom_manga.png';
+            link.download = 'manga_edit.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
+        }
+
+        // 클립보드 복사 기능 (핵심!)
+        async function copyToClipboard() {
+            try {
+                canvas.toBlob(async (blob) => {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    await navigator.clipboard.write([item]);
+                    alert("이미지가 클립보드에 복사되었습니다!\n카톡 등에 바로 붙여넣기 하세요.");
+                });
+            } catch (err) {
+                alert("이 브라우저에서는 클립보드 복사가 지원되지 않습니다. 이미지 저장 기능을 이용해주세요.");
+            }
         }
     </script>
 </body>
