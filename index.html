@@ -3,137 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>만화 말풍선 생성기</title>
+    <title>고급 말풍선 편집기</title>
     <style>
-        :root {
-            --primary-color: #4a90e2;
+        :root { --primary: #4a90e2; }
+        body { display: flex; flex-direction: column; align-items: center; background: #333; color: white; font-family: sans-serif; padding: 20px; }
+        
+        /* 컨트롤 패널 */
+        .controls { 
+            background: white; color: #333; padding: 20px; border-radius: 12px; 
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f5f5f5;
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-            padding: 20px;
-            margin: 0;
-        }
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .canvas-container {
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            line-height: 0;
-            background: white;
-        }
-        /* 입력 영역 스타일 */
-        .input-overlay {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60%;
-            height: 15%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px dashed transparent;
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: black;
-            resize: none;
-            overflow: hidden;
-            outline: none;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .input-overlay:hover, .input-overlay:focus {
-            background: rgba(255, 255, 255, 0.5);
-            border-color: var(--primary-color);
-        }
-        #top-input { top: 3%; }
-        #bottom-input { bottom: 3%; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 12px; font-weight: bold; color: #666; }
+        
+        /* 편집 영역 */
+        .editor-container { position: relative; cursor: crosshair; user-select: none; }
+        canvas { border: 2px solid #555; max-width: 100%; height: auto; background: white; }
 
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: background 0.2s;
+        button { 
+            grid-column: span 2; padding: 12px; background: var(--primary); 
+            color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
         }
-        button:hover { background-color: #357abd; }
-        #guide { color: #666; margin-top: 10px; font-size: 14px; }
+        button:hover { background: #357abd; }
+        .hint { margin-top: 10px; color: #aaa; font-size: 13px; }
     </style>
 </head>
 <body>
 
-    <h2>만화 말풍선 편집기</h2>
-    
+    <h2>말풍선 커스텀 편집기</h2>
+
     <div class="controls">
-        <button onclick="downloadImage()">PNG 이미지로 저장하기</button>
+        <div class="control-group">
+            <label>상단 문구</label>
+            <input type="text" id="topText" value="여기를 드래그해서 이동" oninput="draw()">
+        </div>
+        <div class="control-group">
+            <label>하단 문구</label>
+            <input type="text" id="bottomText" value="폰트와 크기도 조절 가능" oninput="draw()">
+        </div>
+        <div class="control-group">
+            <label>폰트 선택</label>
+            <select id="fontFamily" onchange="draw()">
+                <option value="sans-serif">기본 고딕</option>
+                <option value="serif">명조체</option>
+                <option value="cursive">손글씨풍</option>
+                <option value="'Arial Black'">두꺼운 고딕</option>
+                <option value="'Courier New'">타자기체</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>글자 크기</label>
+            <input type="range" id="fontSize" min="10" max="100" value="30" oninput="draw()">
+        </div>
+        <div class="control-group">
+            <label>글자 굵기</label>
+            <select id="fontWeight" onchange="draw()">
+                <option value="normal">보통</option>
+                <option value="bold" selected>굵게</option>
+            </select>
+        </div>
+        <button onclick="download()">이미지로 저장하기</button>
     </div>
 
-    <div class="canvas-container" id="capture-area">
-        <img id="source-img" src="sample.png" alt="이미지 로드 중..." crossorigin="anonymous" style="max-width: 500px; display: block;">
-        
-        <textarea id="top-input" class="input-overlay" placeholder="상단 문구 입력"></textarea>
-        <textarea id="bottom-input" class="input-overlay" placeholder="하단 문구 입력"></textarea>
+    <div class="editor-container">
+        <canvas id="canvas"></canvas>
     </div>
 
-    <p id="guide">※ 위/아래 말풍선을 클릭해 글자를 입력하고 저장 버튼을 누르세요.</p>
-
-    <canvas id="export-canvas" style="display:none;"></canvas>
+    <p class="hint">💡 화면 위 글자를 마우스나 손가락으로 드래그해서 원하는 위치에 놓으세요!</p>
 
     <script>
-        function downloadImage() {
-            const canvas = document.getElementById('export-canvas');
-            const ctx = canvas.getContext('2d');
-            const img = document.getElementById('source-img');
-            const topText = document.getElementById('top-input').value;
-            const bottomText = document.getElementById('bottom-input').value;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = 'sample.png'; // 같은 폴더의 이미지 파일명
 
-            // 1. 캔버스 크기를 이미지 실제 크기에 맞춤
+        // 텍스트 설정 상태
+        let texts = [
+            { id: 'top', x: 0, y: 0, isDragging: false },
+            { id: 'bottom', x: 0, y: 0, isDragging: false }
+        ];
+
+        img.onload = () => {
             canvas.width = img.naturalWidth;
             canvas.height = img.naturalHeight;
+            // 초기 위치 설정 (말풍선 근처)
+            texts[0].x = canvas.width / 2;
+            texts[0].y = canvas.height * 0.15;
+            texts[1].x = canvas.width / 2;
+            texts[1].y = canvas.height * 0.85;
+            draw();
+        };
 
-            // 2. 이미지 그리기
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
 
-            // 3. 텍스트 설정
-            const fontSize = Math.floor(canvas.width * 0.05); // 이미지 크기에 비례한 글자 크기
-            ctx.font = `bold ${fontSize}px sans-serif`;
+            const size = document.getElementById('fontSize').value;
+            const family = document.getElementById('fontFamily').value;
+            const weight = document.getElementById('fontWeight').value;
+
+            ctx.font = `${weight} ${size}px ${family}`;
             ctx.fillStyle = "black";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            // 4. 상단 텍스트 그리기 (이미지 높이의 약 10% 지점)
-            if (topText) {
-                const lines = topText.split('\n');
-                lines.forEach((line, i) => {
-                    ctx.fillText(line, canvas.width / 2, (canvas.height * 0.2) + (i * fontSize * 1.2));
-                });
-            }
+            // 상단 텍스트
+            ctx.fillText(document.getElementById('topText').value, texts[0].x, texts[0].y);
+            // 하단 텍스트
+            ctx.fillText(document.getElementById('bottomText').value, texts[1].x, texts[1].y);
+        }
 
-            // 5. 하단 텍스트 그리기 (이미지 높이의 약 90% 지점)
-            if (bottomText) {
-                const lines = bottomText.split('\n');
-                lines.forEach((line, i) => {
-                    ctx.fillText(line, canvas.width / 2, (canvas.height * 0.7) - ((lines.length - 1 - i) * fontSize * 1.2));
-                });
-            }
+        // 드래그 로직
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX || e.touches[0].clientX - rect.left) * scaleX - rect.left * scaleX,
+                y: (e.clientY || e.touches[0].clientY - rect.top) * scaleY - rect.top * scaleY
+            };
+        }
 
-            // 6. 다운로드 링크 생성
+        const handleStart = (e) => {
+            const pos = getMousePos(e);
+            texts.forEach(t => {
+                const dist = Math.sqrt((pos.x - t.x)**2 + (pos.y - t.y)**2);
+                if (dist < 50) t.isDragging = true; // 텍스트 근처 클릭 시 드래그 시작
+            });
+        };
+
+        const handleMove = (e) => {
+            const pos = getMousePos(e);
+            texts.forEach(t => {
+                if (t.isDragging) {
+                    t.x = pos.x;
+                    t.y = pos.y;
+                    draw();
+                }
+            });
+        };
+
+        const handleEnd = () => texts.forEach(t => t.isDragging = false);
+
+        canvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        
+        // 터치 지원 (모바일)
+        canvas.addEventListener('touchstart', handleStart);
+        window.addEventListener('touchmove', handleMove);
+        window.addEventListener('touchend', handleEnd);
+
+        function download() {
             const link = document.createElement('a');
-            link.download = 'manga_result.png';
+            link.download = 'custom_manga.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         }
